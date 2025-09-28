@@ -44,6 +44,19 @@ summarizer_service = SummarizerService()
 pdf_processor = PDFProcessor()
 youtube_processor = YouTubeProcessor()
 
+# Pre-load model on startup for better performance
+@app.on_event("startup")
+async def startup_event():
+    """Pre-load model on startup to reduce cold start time"""
+    print("🚀 Starting up Hindi LLM Summarizer...")
+    print("📦 Pre-loading AI model (this may take a moment)...")
+    try:
+        await summarizer_service.load_model()
+        print("✅ Startup complete! Model ready.")
+    except Exception as e:
+        print(f"⚠️ Model loading failed: {e}")
+        print("🔄 App will use extractive summarization only")
+
 # Pydantic models for request validation
 class SummarizeRequest(BaseModel):
     text: str
@@ -94,8 +107,14 @@ async def result_page(request: Request, summary: str, title: str = "Summary", la
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "message": "MultiLanguage AI Text Summarizer is running!"}
+    """Health check endpoint with model status"""
+    model_status = "loaded" if summarizer_service.model_loaded else "loading"
+    return {
+        "status": "healthy", 
+        "message": "MultiLanguage AI Text Summarizer is running!",
+        "model_status": model_status,
+        "cold_start": not summarizer_service.model_loaded
+    }
 
 # API Endpoints
 @app.post("/api/summarize/text")

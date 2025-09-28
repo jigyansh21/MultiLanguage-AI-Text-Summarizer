@@ -4,7 +4,7 @@ uvicorn[standard]==0.24.0
 jinja2==3.1.2
 python-multipart==0.0.6
 
-# AI and ML libraries (optimized for Vercel)
+# AI and ML libraries (optimized for production)
 torch==2.2.0
 transformers==4.21.3
 huggingface-hub==0.16.4
@@ -30,3 +30,6 @@ youtube-transcript-api==0.6.1
 # Utilities
 python-dateutil==2.8.2
 tqdm==4.65.0
+
+# Production dependencies
+gunicorn==21.2.0

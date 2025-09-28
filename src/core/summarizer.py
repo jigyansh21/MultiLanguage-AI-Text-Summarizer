@@ -27,28 +27,49 @@ class SummarizerService:
         self.model_loaded = False
         
     async def load_model(self):
-        """Load the T5 model asynchronously"""
+        """Load the T5 model asynchronously - optimized for free tier"""
         if self.model_loaded:
             return
             
         try:
-            print("Loading T5 model...")
+            print("🔄 Loading T5 model (this may take 30-60 seconds on free tier)...")
+            print("💡 Tip: First request after spin-down will be slower due to model loading")
+            
             # Run model loading in thread pool to avoid blocking
             loop = asyncio.get_event_loop()
             self.tokenizer, self.model = await loop.run_in_executor(
                 None, self._load_model_sync
             )
             self.model_loaded = True
-            print("T5 model loaded successfully!")
+            print("✅ T5 model loaded successfully!")
         except Exception as e:
-            print(f"Error loading model: {e}")
+            print(f"❌ Error loading model: {e}")
+            print("🔄 Falling back to extractive summarization only")
             self.model_loaded = False
     
     def _load_model_sync(self):
-        """Synchronous model loading"""
+        """Synchronous model loading - optimized for free tier"""
         model_name = "t5-small"
-        tokenizer = T5Tokenizer.from_pretrained(model_name)
-        model = T5ForConditionalGeneration.from_pretrained(model_name)
+        
+        # Optimize for free tier memory constraints
+        tokenizer = T5Tokenizer.from_pretrained(
+            model_name,
+            cache_dir="./model_cache",
+            local_files_only=False
+        )
+        
+        model = T5ForConditionalGeneration.from_pretrained(
+            model_name,
+            cache_dir="./model_cache",
+            local_files_only=False,
+            torch_dtype=torch.float32,  # Use float32 instead of float16 for compatibility
+            low_cpu_mem_usage=True
+        )
+        
+        # Set model to evaluation mode and optimize memory
+        model.eval()
+        model.config.use_cache = False
+        
         return tokenizer, model
     
     async def summarize_text(
