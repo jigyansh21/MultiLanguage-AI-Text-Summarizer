@@ -35,3 +35,4 @@ tqdm==4.65.0
 # Production dependencies
 gunicorn==21.2.0
 numpy<2
+sentencepiece==0.1.99
