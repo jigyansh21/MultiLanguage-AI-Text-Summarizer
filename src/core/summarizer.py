@@ -11,7 +11,7 @@ from typing import Dict, Any, Literal
 from pathlib import Path
 
 # AI Model imports
-from transformers.models.t5 import T5Tokenizer, T5ForConditionalGeneration
+from transformers import T5Tokenizer, T5ForConditionalGeneration
 import torch
 
 # Export libraries
