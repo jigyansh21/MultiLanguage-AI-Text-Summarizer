@@ -6,6 +6,7 @@ python-multipart==0.0.6
 
 # AI and ML libraries (optimized for production)
 torch==2.2.0
+tokenizers==0.13.3
 transformers==4.21.3
 huggingface-hub==0.16.4
 
