@@ -36,3 +36,4 @@ tqdm==4.65.0
 gunicorn==21.2.0
 numpy<2
 sentencepiece==0.1.99
+accelerate==0.26.1
