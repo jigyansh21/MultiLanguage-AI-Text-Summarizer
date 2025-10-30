@@ -160,21 +160,18 @@ class YouTubeProcessor:
         language: Literal["hindi", "english"] = "hindi",
         summary_length: Literal["short", "medium", "long", "auto"] = "auto"
     ) -> Dict[str, Any]:
-        """Extract transcript and summarize YouTube video"""
+        """Extract transcript and summarize YouTube video, with universal chunking for long transcripts."""
         try:
             # Extract video ID
             video_id = self.extract_video_id(url)
             if not video_id:
                 raise Exception("Invalid YouTube URL. Please provide a valid YouTube video URL.")
-            
             # Validate URL format
             if not self.is_valid_youtube_url(url):
                 raise Exception("Invalid YouTube URL format. Please provide a valid YouTube video URL.")
-            
             # Get video info
             video_info = await self.get_video_info(video_id)
-            
-            # Get transcript with better error handling
+            # Get transcript
             transcript_language = "hi" if language == "hindi" else "en"
             try:
                 transcript = await self.get_transcript(video_id, transcript_language)
@@ -191,45 +188,57 @@ class YouTubeProcessor:
                     # For other errors, try to get transcript in any available language
                     try:
                         print(f"Trying to get transcript in any available language...")
-                        transcript = await self.get_transcript(video_id, "en")  # Try English as fallback
+                        transcript = await self.get_transcript(video_id, "en")  # Fallback try 'en'
                     except Exception as fallback_error:
                         print(f"Fallback also failed: {fallback_error}")
-                        # If fallback also fails, re-raise the original error
                         raise transcript_error
-            
             if not transcript.strip():
                 raise Exception("No transcript available for this video. Please try a different video that has captions enabled.")
-            
             # Import summarizer service
             from src.core.summarizer import SummarizerService
             summarizer = SummarizerService()
-            
-            # Summarize the transcript
-            result = await summarizer.summarize_text(
-                text=transcript,
-                language=language,
-                summary_length=summary_length
-            )
-            
-            # Add video information to result
-            result["title"] = video_info["title"]
-            result["video_id"] = video_id
-            result["video_url"] = video_info["url"]
-            
-            return result
-            
+            # Chunk transcript to avoid model limits
+            max_tokens = 512
+            chunks = transcript.split('.')  # Naive split by sentence; improve with tokenizer if desired
+            chunk_texts = []
+            curr = ''
+            for sent in chunks:
+                if len((curr + sent).split()) < 350:  # Approx below 512 tokens (use tokenizer len if possible)
+                    curr += sent + '.'
+                else:
+                    if curr.strip():
+                        chunk_texts.append(curr.strip())
+                    curr = sent + '.'
+            if curr.strip():
+                chunk_texts.append(curr.strip())
+            # Summarize each chunk, join
+            summaries = []
+            for chunk in chunk_texts:
+                if len(chunk.split()) < 10: continue
+                result = await summarizer.summarize_text(
+                    text=chunk,
+                    language=language,
+                    summary_length=summary_length
+                )
+                summaries.append(result['summary'].strip())
+            summary = '\n'.join(summaries)
+            # Add video info and completion
+            word_count = len(transcript.split())
+            summary_words = len(summary.split())
+            return {
+                "summary": summary,
+                "original_length": word_count,
+                "summary_length": summary_words,
+                "compression_ratio": round(summary_words / word_count, 2) if word_count else 0.0,
+                "title": video_info["title"],
+                "video_id": video_id,
+                "video_url": video_info["url"]
+            }
         except Exception as e:
-            # Don't wrap the error message again if it's already user-friendly
             error_msg = str(e)
-            if any(phrase in error_msg.lower() for phrase in [
-                "captions/transcripts available", 
-                "unavailable or private", 
-                "quota exceeded",
-                "invalid youtube url"
-            ]):
+            if any(phrase in error_msg.lower() for phrase in ["captions/transcripts available", "unavailable or private", "quota exceeded", "invalid youtube url"]):
                 raise Exception(error_msg)
             else:
-                # For other errors, provide a more generic message but don't hide the original error
                 raise Exception(f"Failed to process YouTube video: {error_msg}")
     
     def is_valid_youtube_url(self, url: str) -> bool:

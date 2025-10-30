@@ -72,36 +72,64 @@ class SummarizerService:
         
         return tokenizer, model
     
-    async def summarize_text(
-        self, 
-        text: str, 
-        language: Literal["hindi", "english"] = "hindi",
-        summary_length: Literal["short", "medium", "long", "auto"] = "auto"
-    ) -> Dict[str, Any]:
-        """Summarize text using AI model"""
+    def _tokenize_length(self, text: str) -> int:
+        """Count the number of tokens in a text for T5 tokenizer limit check."""
+        if not self.tokenizer:
+            # Fallback guess: 1 word = 1 token
+            return len(text.split())
+        return len(self.tokenizer.encode(text, truncation=False))
+
+    def _split_into_chunks(self, text: str, max_tokens: int = 512) -> list:
+        """Splits text into chunks each <= max_tokens for T5 input limit."""
+        if not self.tokenizer:
+            # Fallback: naive split by word count
+            words = text.split()
+            return [" ".join(words[i:i+max_tokens]) for i in range(0, len(words), max_tokens)]
+        tokens = self.tokenizer.encode(text, truncation=False)
+        chunks = [tokens[i:i+max_tokens] for i in range(0, len(tokens), max_tokens)]
+        return [self.tokenizer.decode(chunk, skip_special_tokens=True) for chunk in chunks]
+
+    async def summarize_text(self, text: str, language: Literal["hindi", "english"] = "hindi", summary_length: Literal["short", "medium", "long", "auto"] = "auto") -> Dict[str, Any]:
+        """Summarize text using AI model; universal chunking/truncation for huge inputs."""
         try:
             start_time = time.time()
-            
-            # Validate input
             if not text or not text.strip():
                 raise ValueError("Text cannot be empty")
-            
-            # Handle auto summary length
-            if summary_length == "auto":
-                word_count = len(text.split())
-                if word_count < 100:
-                    summary_length = "short"
-                elif word_count < 500:
-                    summary_length = "medium"
+            # Tokenize and chunk if needed
+            await self.load_model()
+            max_tokens = 512
+            chunks = self._split_into_chunks(text, max_tokens=max_tokens)
+            summary_chunks = []
+            for ch in chunks:
+                # Short circuit: if chunk too small, skip
+                if self._tokenize_length(ch) < 10:
+                    continue
+                # Get summary for chunk (use T5 only if model loaded)
+                if self.model_loaded:
+                    # Assemble prompt (for Hindi or English)
+                    prompt = ("summarize: " if language=="english" else "अनुच्छेद का सारांश बनाएँ: ") + ch
+                    input_ids = self.tokenizer.encode(prompt, return_tensors="pt", truncation=True, max_length=max_tokens)
+                    summary_ids = self.model.generate(input_ids, max_length=150, num_beams=4, early_stopping=True)
+                    summary = self.tokenizer.decode(summary_ids[0], skip_special_tokens=True)
                 else:
-                    summary_length = "long"
-            
-            # For now, use extractive summarization as primary method
-            # T5 model needs more work for proper summarization
-            print("Using extractive summarization method")
-            return await self._extractive_summarize(text, language, summary_length)
+                    # Fallback to extractive
+                    summary = (await self._extractive_summarize(ch, language, "short"))['summary']
+                summary_chunks.append(summary.strip())
+            # Combine summaries
+            summary = "\n".join(summary_chunks)
+            processing_time = time.time() - start_time
+            # Compression ratio: summarized length vs original length
+            word_count = len(text.split())
+            summary_words = len(summary.split())
+            return {
+                "summary": summary,
+                "original_length": word_count,
+                "summary_length": summary_words,
+                "compression_ratio": round(summary_words / word_count, 2) if word_count else 0.0,
+                "processing_time": round(processing_time, 2)
+            }
         except Exception as e:
-            print(f"Error in summarize_text: {e}")
+            print(f"Error in summarize_text (universal chunking): {e}")
             raise Exception(f"Failed to summarize text: {str(e)}")
     
     async def _extractive_summarize(

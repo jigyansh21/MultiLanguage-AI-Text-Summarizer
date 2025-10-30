@@ -203,20 +203,18 @@ async def export_pdf(
     title: str = Form("Summary"),
     language: str = Form("hindi")
 ):
-    """Export summary as PDF"""
     try:
         if not summary or not summary.strip():
             raise HTTPException(status_code=400, detail="Summary cannot be empty")
-        
+        if len(summary) > 10000:
+            raise HTTPException(status_code=400, detail="Summary too long to export. Please use Short or Medium summary length.")
         pdf_path = await summarizer_service.export_pdf(
             summary=summary,
             title=title,
             language=language
         )
-        
         if not os.path.exists(pdf_path):
             raise HTTPException(status_code=500, detail="Failed to generate PDF file")
-        
         return FileResponse(
             pdf_path,
             media_type="application/pdf",
@@ -228,14 +226,18 @@ async def export_pdf(
         print(f"PDF export error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to export PDF: {str(e)}")
 
+# Repeat for Word/Markdown, same logic for length max/checks on summary
 @app.post("/api/export/word")
 async def export_word(
     summary: str = Form(...),
     title: str = Form("Summary"),
     language: str = Form("hindi")
 ):
-    """Export summary as Word document"""
     try:
+        if not summary or not summary.strip():
+            raise HTTPException(status_code=400, detail="Summary cannot be empty")
+        if len(summary) > 10000:
+            raise HTTPException(status_code=400, detail="Summary too long to export. Please use Short or Medium summary length.")
         doc_path = await summarizer_service.export_word(
             summary=summary,
             title=title,
@@ -255,8 +257,11 @@ async def export_markdown(
     title: str = Form("Summary"),
     language: str = Form("hindi")
 ):
-    """Export summary as Markdown"""
     try:
+        if not summary or not summary.strip():
+            raise HTTPException(status_code=400, detail="Summary cannot be empty")
+        if len(summary) > 10000:
+            raise HTTPException(status_code=400, detail="Summary too long to export. Please use Short or Medium summary length.")
         md_path = await summarizer_service.export_markdown(
             summary=summary,
             title=title,
