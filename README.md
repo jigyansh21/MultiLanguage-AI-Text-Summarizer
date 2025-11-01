@@ -7,6 +7,21 @@ A powerful, modular **NLP/AI web application** for summarizing text content in b
 [![NLP](https://img.shields.io/badge/NLP-AI%20Summarization-purple.svg)](https://huggingface.co)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+## 🎥 Demo Videos
+
+Watch comprehensive demo videos showcasing all features:
+- **[View All Demo Videos](demo/README.md)** - Complete feature walkthroughs in Hindi and English
+
+### 📹 Quick Demo Links
+- [Hindi Manual Text Summarizer](https://drive.google.com/file/d/1IbJHacPmgr7GXPtOeTjog614FrjgUszM/view?usp=sharing)
+- [Hindi PDF Summarizer](https://drive.google.com/file/d/1LnNu02fIEnUgeIGi_ciqeJKyKx6XNR21/view?usp=sharing)
+- [Hindi URL Summarizer](https://drive.google.com/file/d/1gl1nA52BxZ6w9r0u2IJMxHfOunm0nGlL/view?usp=sharing)
+- [Hindi YouTube Summarizer](https://drive.google.com/file/d/1ecRI44_JBxtFXTILyw08eFepzYAHwwPZ/view?usp=sharing)
+- [English Manual Text Summarizer](https://drive.google.com/file/d/1q48gUMXjXlIwETXZqI-0So8DmMyASoEa/view?usp=sharing)
+- [English PDF Summarizer](https://drive.google.com/file/d/1ItyLX2EuNYVPLjMgFXw8BqQ87cvTLFdT/view?usp=sharing)
+- [English URL Summarizer](https://drive.google.com/file/d/1ItyLX2EuNYVPLjMgFXw8BqQ87cvTLFdT/view?usp=sharing)
+- [English YouTube Summarizer](https://drive.google.com/file/d/1WGPt5PjryRP6T5yWcurTPxGPalZ12Wi0/view?usp=sharing)
+
 ## ✨ Features
 
 ### 🎯 Core Functionality
@@ -51,6 +66,8 @@ MultiLanguage-AI-Text-Summarizer/
 │   └── styles.css               # Custom CSS
 ├── fonts/                        # Font files
 │   └── NotoSansDevanagari-Regular.ttf
+├── demo/                         # Demo videos and documentation
+│   └── README.md                # Demo video links and descriptions
 ├── main.py                      # Application entry point
 ├── requirements.txt             # Python dependencies
 └── README.md                    # This file

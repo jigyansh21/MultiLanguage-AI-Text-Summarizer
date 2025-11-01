@@ -706,9 +706,21 @@
                     console.log(`Default theme 'light' saved for ${language} before redirect`);
                 }
                 
-                // Redirect to results
-                const params = new URLSearchParams({
+                // Store summary in sessionStorage to avoid URL length limits
+                // URL params have ~2048 char limit, so use storage instead
+                const summaryData = {
                     summary: result.summary,
+                    title: result.title || 'Summary',
+                    language: language,
+                    original_length: result.original_length || 0,
+                    summary_length: result.summary_length || 0,
+                    compression_ratio: result.compression_ratio || 0,
+                    processing_time: result.processing_time || 0
+                };
+                sessionStorage.setItem('lastSummary', JSON.stringify(summaryData));
+                
+                // Redirect to results with minimal data (just title and language in URL)
+                const params = new URLSearchParams({
                     title: result.title || 'Summary',
                     language: language
                 });

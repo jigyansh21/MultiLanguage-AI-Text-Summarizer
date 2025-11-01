@@ -215,6 +215,55 @@
                     {{ summary }}
                 </div>
             </div>
+            
+            <script>
+                // Retrieve summary from sessionStorage (avoids URL length limits)
+                (function() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const expectedLanguage = urlParams.get('language') || '{{ language }}';
+                    
+                    try {
+                        const storedData = sessionStorage.getItem('lastSummary');
+                        if (storedData) {
+                            const summaryData = JSON.parse(storedData);
+                            // Use stored data if language matches
+                            if (summaryData.language === expectedLanguage || 
+                                summaryData.language.toLowerCase() === expectedLanguage.toLowerCase()) {
+                                // Update summary content
+                                const summaryElement = document.getElementById('summary-content');
+                                if (summaryElement) {
+                                    summaryElement.textContent = summaryData.summary;
+                                    console.log('Loaded summary from sessionStorage (length: ' + summaryData.summary.length + ' chars)');
+                                }
+                                
+                                // Update title if different
+                                const titleFromUrl = urlParams.get('title') || '{{ title }}';
+                                if (summaryData.title && summaryData.title !== titleFromUrl && summaryData.title !== 'Summary') {
+                                    const titleElement = document.querySelector('h2');
+                                    if (titleElement) {
+                                        titleElement.innerHTML = '<i class="fas fa-file-alt text-blue-600 dark:text-blue-400 mr-3"></i>' + summaryData.title;
+                                    }
+                                }
+                                
+                                // Update statistics if available
+                                if (summaryData.summary_length) {
+                                    const summaryLengthEl = document.getElementById('summary-length');
+                                    if (summaryLengthEl) {
+                                        summaryLengthEl.textContent = summaryData.summary_length + ' words';
+                                    }
+                                }
+                            } else {
+                                console.log('Language mismatch - using URL summary');
+                            }
+                        } else {
+                            console.log('No data in sessionStorage - using URL summary');
+                        }
+                    } catch (e) {
+                        console.error('Error loading from sessionStorage:', e);
+                        console.log('Falling back to URL summary');
+                    }
+                })();
+            </script>
 
             <!-- Action Buttons -->
             <div class="flex flex-wrap gap-4 mb-6">
@@ -463,7 +512,22 @@
         function copyToClipboard() {
             try {
                 console.log('Copy to clipboard function called');
-                const summaryText = document.getElementById('summary-content').textContent;
+                let summaryText = document.getElementById('summary-content').textContent;
+                
+                // Fallback: try to get from sessionStorage if element is empty
+                if (!summaryText || summaryText.trim().length < 10) {
+                    try {
+                        const storedData = sessionStorage.getItem('lastSummary');
+                        if (storedData) {
+                            const summaryData = JSON.parse(storedData);
+                            summaryText = summaryData.summary;
+                            console.log('Retrieved summary from sessionStorage for clipboard');
+                        }
+                    } catch (e) {
+                        console.error('Error getting summary from sessionStorage:', e);
+                    }
+                }
+                
                 console.log('Summary text length:', summaryText ? summaryText.length : 0);
                 
                 if (!summaryText || summaryText.trim() === '') {
@@ -523,7 +587,27 @@
                 console.log('PDF export function called');
                 showToast('Generating PDF...');
                 // Get the summary content from the page
-                const summaryContent = document.getElementById('summary-content').textContent;
+                let summaryContent = document.getElementById('summary-content').textContent;
+                
+                // Fallback: try to get from sessionStorage if element is empty
+                if (!summaryContent || summaryContent.trim().length < 10) {
+                    try {
+                        const storedData = sessionStorage.getItem('lastSummary');
+                        if (storedData) {
+                            const summaryData = JSON.parse(storedData);
+                            summaryContent = summaryData.summary;
+                            console.log('Retrieved summary from sessionStorage for PDF export');
+                        }
+                    } catch (e) {
+                        console.error('Error getting summary from sessionStorage:', e);
+                    }
+                }
+                
+                if (!summaryContent || summaryContent.trim().length < 10) {
+                    showToast('No summary content available to export!', 'error');
+                    return;
+                }
+                
                 const title = '{{ title }}';
                 const language = '{{ language }}';
                 
@@ -572,7 +656,27 @@
             try {
                 showToast('Generating Word document...');
                 // Get the summary content from the page
-                const summaryContent = document.getElementById('summary-content').textContent;
+                let summaryContent = document.getElementById('summary-content').textContent;
+                
+                // Fallback: try to get from sessionStorage if element is empty
+                if (!summaryContent || summaryContent.trim().length < 10) {
+                    try {
+                        const storedData = sessionStorage.getItem('lastSummary');
+                        if (storedData) {
+                            const summaryData = JSON.parse(storedData);
+                            summaryContent = summaryData.summary;
+                            console.log('Retrieved summary from sessionStorage for Word export');
+                        }
+                    } catch (e) {
+                        console.error('Error getting summary from sessionStorage:', e);
+                    }
+                }
+                
+                if (!summaryContent || summaryContent.trim().length < 10) {
+                    showToast('No summary content available to export!', 'error');
+                    return;
+                }
+                
                 const title = '{{ title }}';
                 const language = '{{ language }}';
                 
@@ -611,7 +715,27 @@
             try {
                 showToast('Generating Markdown file...');
                 // Get the summary content from the page
-                const summaryContent = document.getElementById('summary-content').textContent;
+                let summaryContent = document.getElementById('summary-content').textContent;
+                
+                // Fallback: try to get from sessionStorage if element is empty
+                if (!summaryContent || summaryContent.trim().length < 10) {
+                    try {
+                        const storedData = sessionStorage.getItem('lastSummary');
+                        if (storedData) {
+                            const summaryData = JSON.parse(storedData);
+                            summaryContent = summaryData.summary;
+                            console.log('Retrieved summary from sessionStorage for Markdown export');
+                        }
+                    } catch (e) {
+                        console.error('Error getting summary from sessionStorage:', e);
+                    }
+                }
+                
+                if (!summaryContent || summaryContent.trim().length < 10) {
+                    showToast('No summary content available to export!', 'error');
+                    return;
+                }
+                
                 const title = '{{ title }}';
                 const language = '{{ language }}';
                 

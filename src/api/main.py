@@ -3,6 +3,19 @@ FastAPI Backend for MultiLanguage AI Text Summarizer
 Modern, async API with support for Text, URL, PDF, and YouTube summarization
 """
 
+import sys
+import io
+import os
+
+# Fix Windows console encoding for Unicode support
+if sys.platform == 'win32':
+    # Set UTF-8 encoding for stdout/stderr
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'buffer'):
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+
 from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -48,14 +61,14 @@ youtube_processor = YouTubeProcessor()
 @app.on_event("startup")
 async def startup_event():
     """Pre-load model on startup to reduce cold start time"""
-    print("🚀 Starting up Hindi LLM Summarizer...")
-    print("📦 Pre-loading AI model (this may take a moment)...")
+    print("[INFO] Starting up Hindi LLM Summarizer...")
+    print("[INFO] Pre-loading AI model (this may take a moment)...")
     try:
         await summarizer_service.load_model()
-        print("✅ Startup complete! Model ready.")
+        print("[OK] Startup complete! Model ready.")
     except Exception as e:
-        print(f"⚠️ Model loading failed: {e}")
-        print("🔄 App will use extractive summarization only")
+        print(f"[WARN] Model loading failed: {e}")
+        print("[INFO] App will use extractive summarization only")
 
 # Pydantic models for request validation
 class SummarizeRequest(BaseModel):
@@ -96,11 +109,11 @@ async def summarizer_dashboard(request: Request, language: str = "hindi"):
     })
 
 @app.get("/result", response_class=HTMLResponse)
-async def result_page(request: Request, summary: str, title: str = "Summary", language: str = "hindi"):
-    """Results display page"""
+async def result_page(request: Request, summary: str = "", title: str = "Summary", language: str = "hindi"):
+    """Results display page - summary can come from URL params or sessionStorage (for long summaries)"""
     return templates.TemplateResponse("result.html", {
         "request": request,
-        "summary": summary,
+        "summary": summary,  # Will be empty if using sessionStorage, populated from sessionStorage in frontend
         "title": title,
         "language": language
     })
@@ -206,13 +219,24 @@ async def export_pdf(
     try:
         if not summary or not summary.strip():
             raise HTTPException(status_code=400, detail="Summary cannot be empty")
-        if len(summary) > 10000:
+        # Allow up to 50,000 characters for export (reasonable limit)
+        if len(summary) > 50000:
             raise HTTPException(status_code=400, detail="Summary too long to export. Please use Short or Medium summary length.")
+        # Log what we're receiving (avoid printing Hindi text directly to prevent Windows encoding errors)
+        print(f"[API] PDF Export Request - Language: {language}, Summary length: {len(summary)} chars")
+        try:
+            # Try to show first chars safely
+            preview = summary[:100].encode('utf-8', errors='ignore').decode('utf-8', errors='ignore')
+            print(f"[API] Summary preview: {len(preview)} chars")
+        except:
+            print("[API] Summary received (content may contain Unicode)")
+        
         pdf_path = await summarizer_service.export_pdf(
             summary=summary,
             title=title,
             language=language
         )
+        print(f"[API] PDF generated at: {pdf_path}")
         if not os.path.exists(pdf_path):
             raise HTTPException(status_code=500, detail="Failed to generate PDF file")
         return FileResponse(
@@ -223,8 +247,17 @@ async def export_pdf(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"PDF export error: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to export PDF: {str(e)}")
+        # Safe error handling for Windows console and HTTP response
+        try:
+            err_str = str(e).encode('ascii', errors='replace').decode('ascii')
+            print(f"PDF export error: {err_str}")
+            # For HTTP response, use safe error message
+            safe_detail = err_str[:200]  # Limit length
+            raise HTTPException(status_code=500, detail=f"Failed to export PDF: {safe_detail}")
+        except:
+            # If even that fails, use generic message
+            print("PDF export error: Unknown error (encoding issue)")
+            raise HTTPException(status_code=500, detail="Failed to export PDF: Encoding or font issue")
 
 # Repeat for Word/Markdown, same logic for length max/checks on summary
 @app.post("/api/export/word")
@@ -236,7 +269,8 @@ async def export_word(
     try:
         if not summary or not summary.strip():
             raise HTTPException(status_code=400, detail="Summary cannot be empty")
-        if len(summary) > 10000:
+        # Allow up to 50,000 characters for export (reasonable limit)
+        if len(summary) > 50000:
             raise HTTPException(status_code=400, detail="Summary too long to export. Please use Short or Medium summary length.")
         doc_path = await summarizer_service.export_word(
             summary=summary,
@@ -260,7 +294,8 @@ async def export_markdown(
     try:
         if not summary or not summary.strip():
             raise HTTPException(status_code=400, detail="Summary cannot be empty")
-        if len(summary) > 10000:
+        # Allow up to 50,000 characters for export (reasonable limit)
+        if len(summary) > 50000:
             raise HTTPException(status_code=400, detail="Summary too long to export. Please use Short or Medium summary length.")
         md_path = await summarizer_service.export_markdown(
             summary=summary,

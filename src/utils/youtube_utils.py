@@ -221,7 +221,54 @@ class YouTubeProcessor:
                     summary_length=summary_length
                 )
                 summaries.append(result['summary'].strip())
-            summary = '\n'.join(summaries)
+            
+            # Combine summaries and truncate if needed based on summary_length
+            combined_summary = '\n'.join(summaries)
+            combined_words = len(combined_summary.split())
+            
+            # Truncate to target word limits if exceeded (more aggressive thresholds)
+            if summary_length == "short" and combined_words > 50:
+                # Truncate to ~50 words for short (changed from 60 to 50)
+                sentences = combined_summary.replace('\n', '. ').split('.')
+                summary_words = 0
+                truncated_sentences = []
+                for sentence in sentences:
+                    sentence_words = len(sentence.split())
+                    if summary_words + sentence_words <= 50:
+                        truncated_sentences.append(sentence)
+                        summary_words += sentence_words
+                    else:
+                        break
+                summary = '. '.join(truncated_sentences) + '.' if truncated_sentences else combined_summary[:300] + '...'
+            elif summary_length == "medium" and combined_words > 100:
+                # Truncate to ~100 words for medium (changed from 120 to 100)
+                sentences = combined_summary.replace('\n', '. ').split('.')
+                summary_words = 0
+                truncated_sentences = []
+                for sentence in sentences:
+                    sentence_words = len(sentence.split())
+                    if summary_words + sentence_words <= 100:
+                        truncated_sentences.append(sentence)
+                        summary_words += sentence_words
+                    else:
+                        break
+                summary = '. '.join(truncated_sentences) + '.' if truncated_sentences else combined_summary[:600] + '...'
+            elif summary_length == "long" and combined_words > 300:
+                # Truncate to ~300 words for long (same as URL fix)
+                sentences = combined_summary.replace('\n', '. ').split('.')
+                summary_words = 0
+                truncated_sentences = []
+                for sentence in sentences:
+                    sentence_words = len(sentence.split())
+                    if summary_words + sentence_words <= 300:
+                        truncated_sentences.append(sentence)
+                        summary_words += sentence_words
+                    else:
+                        break
+                summary = '. '.join(truncated_sentences) + '.' if truncated_sentences else combined_summary[:1500] + '...'
+            else:
+                summary = combined_summary
+            
             # Add video info and completion
             word_count = len(transcript.split())
             summary_words = len(summary.split())

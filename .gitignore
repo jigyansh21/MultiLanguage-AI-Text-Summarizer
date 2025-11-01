@@ -66,3 +66,15 @@ models/
 
 # Render specific
 .render/
+
+# Test files
+test_*.py
+*test*.py
+*test*.txt
+test_report.txt
+
+# Model cache
+model_cache/
+
+# Test checklists (keep README.md)
+TEST_CHECKLIST.md
