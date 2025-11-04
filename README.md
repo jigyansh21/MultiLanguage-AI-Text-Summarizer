@@ -230,6 +230,22 @@ python main.py
 - **Error Handling**: Comprehensive exception management
 - **Documentation**: Detailed docstrings and comments
 
+## 🚀 Deployment
+
+This project is deployed on **Render** (production environment).
+
+### Deployment Details
+- **Platform**: Render
+- **Type**: Web Service
+- **Runtime**: Python 3.11.0
+- **Configuration**: See `render.yaml` for deployment settings
+- **Health Check**: Available at `/health` endpoint
+
+### Deployment Configuration Files
+- `render.yaml` - Render deployment configuration
+- `Procfile` - Process definition for Render
+- `start.sh` - Production startup script
+
 ## 📝 License
 
 This project is created by Jigyansh ECE Undergraduate, Thapar Institute of Engineering Technology, Patiala.
